@@ -98,6 +98,40 @@ unsafe extern "C" {
     //                                               const unsigned char * bytes_s, int len_s,
     //                                               const unsigned char * bytes_B, int len_B,
     //                                               const unsigned char ** bytes_M, int * len_M );
+
+    fn srp_verifier_new(
+        alg: SrpHashAlgorithm,
+        ng_type: SrpNGType,
+        username: *const u8,
+        bytes_s: *const u8,
+        len_s: i32,
+        bytes_v: *const u8,
+        len_v: i32,
+        bytes_A: *const u8,
+        len_A: i32,
+        bytes_B: *mut *const u8,
+        len_B: *mut i32,
+        n_hex: *const u8,
+        g_hex: *const u8,
+    ) -> *mut std::ffi::c_void;
+
+    // struct SRPVerifier *  srp_verifier_new( SRP_HashAlgorithm alg, SRP_NGType ng_type, const char * username,
+    //                                     const unsigned char * bytes_s, int len_s,
+    //                                     const unsigned char * bytes_v, int len_v,
+    //                                     const unsigned char * bytes_A, int len_A,
+    //                                     const unsigned char ** bytes_B, int * len_B,
+    //                                     const char * n_hex, const char * g_hex );
+
+    fn srp_verifier_verify_session(
+        ver: *mut std::ffi::c_void,
+        user_M: *const u8,
+        bytes_HAMK: *mut *const u8,
+    );
+
+    // void                  srp_verifier_verify_session( struct SRPVerifier * ver,
+    //                                                const unsigned char * user_M,
+    //                                                const unsigned char ** bytes_HAMK );
+
 }
 
 fn main() {
@@ -128,9 +162,9 @@ fn main() {
         );
 
         let salt = std::slice::from_raw_parts(bytes_s, len_s as usize);
-        println!("SALT: {:?}", salt);
+        println!("SALT: {:?}\n", salt);
         let verifier = std::slice::from_raw_parts(bytes_v, len_v as usize);
-        println!("VERIFIER: {:?}", verifier);
+        println!("VERIFIER: {:?}\n", verifier);
 
         let usr = srp_user_new(
             SrpHashAlgorithm::SHA512,
@@ -145,7 +179,7 @@ fn main() {
         srp_user_start_authentication(usr, &username.as_ptr(), &mut bytes_a, &mut len_a);
 
         let bytes_a = std::slice::from_raw_parts(bytes_a, len_a as usize);
-        println!("BYTES_A: {:?}", bytes_a);
+        println!("BYTES_A: {:?}\n", bytes_a);
 
         // Client->Server: bytes_a
         let srp_server = SrpServer::<Sha512>::new(&G_2048);
@@ -154,6 +188,26 @@ fn main() {
         rng.try_fill_bytes(&mut b).expect("Failed to fill bytes");
         let b_pub = srp_server
             .compute_public_ephemeral_csrp(&b, std::slice::from_raw_parts(bytes_v, len_v as usize));
+
+        let mut csrp_b: *const u8 = std::ptr::null_mut();
+        let mut csrp_len = 0;
+        let csrp_ver = srp_verifier_new(
+            SrpHashAlgorithm::SHA512,
+            SrpNGType::NG2048,
+            username.as_ptr(),
+            bytes_s,
+            len_s,
+            bytes_v,
+            len_v,
+            bytes_a.as_ptr(),
+            len_a,
+            &mut csrp_b,
+            &mut csrp_len,
+            std::ptr::null(),
+            std::ptr::null(),
+        );
+
+        let csrp_b = std::slice::from_raw_parts(csrp_b, csrp_len as usize);
 
         // Server->Client: (b_pub, salt)
         let mut bytes_m: *const u8 = std::ptr::null_mut();
@@ -170,7 +224,7 @@ fn main() {
         );
 
         let bytes_m = std::slice::from_raw_parts(bytes_m, len_m as usize);
-        println!("BYTES_M: {:?}", bytes_m);
+        println!("BYTES_M: {:?}\n", bytes_m);
 
         // Client->Server: bytes_m
         let srp_verifier = srp_server
