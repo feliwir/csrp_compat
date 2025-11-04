@@ -226,9 +226,12 @@ fn main() {
         let bytes_m = std::slice::from_raw_parts(bytes_m, len_m as usize);
         println!("BYTES_M: {:?}\n", bytes_m);
 
+        // Exclude the trailing null byte for username
+        let username_nozero = &username[..username.len() - 1];
+
         // Client->Server: bytes_m
         let srp_verifier = srp_server
-            .process_reply_csrp(username, salt, &b, verifier, bytes_a)
+            .process_reply_csrp(username_nozero, salt, &b, verifier, bytes_a)
             .expect("Failed to process reply");
 
         srp_verifier

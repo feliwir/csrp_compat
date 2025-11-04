@@ -251,7 +251,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "srp"
 version = "0.7.0-pre"
-source = "git+https://github.com/feliwir/PAKEs.git?rev=57ab697#57ab697ec4b78a430e0054bdd08bbf33550d0a35"
+source = "git+https://github.com/feliwir/PAKEs.git?rev=1ef058c#1ef058c75a77fcbc2b7a2786df62df1ba2ee12f2"
 dependencies = [
  "digest",
  "generic-array",
