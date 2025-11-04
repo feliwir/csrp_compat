@@ -187,27 +187,7 @@ fn main() {
         let mut b = [0u8; 64];
         rng.try_fill_bytes(&mut b).expect("Failed to fill bytes");
         let b_pub = srp_server
-            .compute_public_ephemeral_csrp(&b, std::slice::from_raw_parts(bytes_v, len_v as usize));
-
-        let mut csrp_b: *const u8 = std::ptr::null_mut();
-        let mut csrp_len = 0;
-        let csrp_ver = srp_verifier_new(
-            SrpHashAlgorithm::SHA512,
-            SrpNGType::NG2048,
-            username.as_ptr(),
-            bytes_s,
-            len_s,
-            bytes_v,
-            len_v,
-            bytes_a.as_ptr(),
-            len_a,
-            &mut csrp_b,
-            &mut csrp_len,
-            std::ptr::null(),
-            std::ptr::null(),
-        );
-
-        let csrp_b = std::slice::from_raw_parts(csrp_b, csrp_len as usize);
+            .compute_public_ephemeral_csrp(&b, verifier);
 
         // Server->Client: (b_pub, salt)
         let mut bytes_m: *const u8 = std::ptr::null_mut();
