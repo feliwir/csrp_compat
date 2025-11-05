@@ -139,31 +139,37 @@ fn main() {
     let username = b"alice\0";
     let password = b"password123\0";
 
+    let client = srp::client::SrpClient::<sha2::Sha512>::new(&srp::groups::G_2048);
+    // Generate 8-random-byte salt
+    let mut salt = [0u8; 8];
+    rand::rngs::OsRng.try_fill_bytes(&mut salt).expect("Failed to generate salt");
+    let verifier = client.compute_verifier(b"admin", &salt, &password[..password.len()-1]);
+
     unsafe {
-        let mut bytes_s: *const u8 = std::ptr::null_mut();
-        let mut len_s: i32 = 0;
-        let mut bytes_v: *const u8 = std::ptr::null_mut();
-        let mut len_v: i32 = 0;
+        // let mut bytes_s: *const u8 = std::ptr::null_mut();
+        // let mut len_s: i32 = 0;
+        // let mut bytes_v: *const u8 = std::ptr::null_mut();
+        // let mut len_v: i32 = 0;
         let mut bytes_a: *const u8 = std::ptr::null_mut();
         let mut len_a: i32 = 0;
 
-        srp_create_salted_verification_key(
-            SrpHashAlgorithm::SHA512,
-            SrpNGType::NG2048,
-            username.as_ptr(),
-            password.as_ptr(),
-            password.len() as i32 - 1,
-            &mut bytes_s,
-            &mut len_s,
-            &mut bytes_v,
-            &mut len_v,
-            std::ptr::null(),
-            std::ptr::null(),
-        );
+        // srp_create_salted_verification_key(
+        //     SrpHashAlgorithm::SHA512,
+        //     SrpNGType::NG2048,
+        //     username.as_ptr(),
+        //     password.as_ptr(),
+        //     password.len() as i32 - 1,
+        //     &mut bytes_s,
+        //     &mut len_s,
+        //     &mut bytes_v,
+        //     &mut len_v,
+        //     std::ptr::null(),
+        //     std::ptr::null(),
+        // );
 
-        let salt = std::slice::from_raw_parts(bytes_s, len_s as usize);
+        // let salt = std::slice::from_raw_parts(bytes_s, len_s as usize);
         println!("SALT: {:?}\n", salt);
-        let verifier = std::slice::from_raw_parts(bytes_v, len_v as usize);
+        // let verifier = std::slice::from_raw_parts(bytes_v, len_v as usize);
         println!("VERIFIER: {:?}\n", verifier);
 
         let usr = srp_user_new(
@@ -187,7 +193,7 @@ fn main() {
         let mut b = [0u8; 64];
         rng.try_fill_bytes(&mut b).expect("Failed to fill bytes");
         let b_pub = srp_server
-            .compute_public_ephemeral_csrp(&b, verifier);
+            .compute_public_ephemeral_csrp(&b, &verifier);
 
         // Server->Client: (b_pub, salt)
         let mut bytes_m: *const u8 = std::ptr::null_mut();
@@ -195,8 +201,8 @@ fn main() {
 
         srp_user_process_challenge(
             usr,
-            bytes_s,
-            len_s,
+            salt.as_ptr(),
+            salt.len() as i32,
             b_pub.as_ptr(),
             b_pub.len() as i32,
             &mut bytes_m,
@@ -211,7 +217,7 @@ fn main() {
 
         // Client->Server: bytes_m
         let srp_verifier = srp_server
-            .process_reply_csrp(username_nozero, salt, &b, verifier, bytes_a)
+            .process_reply_csrp(username_nozero, &salt, &b, &verifier, bytes_a)
             .expect("Failed to process reply");
 
         srp_verifier
